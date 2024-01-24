@@ -19,12 +19,15 @@
       pkgs = import nixpkgs { inherit system; };
       pkg_buildInputs = with pkgs; [
         glslang
+        SDL2
         vulkan-headers
         vulkan-loader
         vulkan-validation-layers
       ];
       pkg_nativeBuildInputs = with pkgs; [
+        clang-tools_9
         gcc12
+        gdb
         cmake
         gnumake
         coreutils

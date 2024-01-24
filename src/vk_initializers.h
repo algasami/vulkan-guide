@@ -7,6 +7,6 @@
 
 namespace vkinit {
 
-	//vulkan init code goes here
-}
+// vulkan init code goes here
 
+}
