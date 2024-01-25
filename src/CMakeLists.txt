@@ -1,4 +1,4 @@
-
+include(FetchContent)
 # Add source to this project's executable.
 add_executable(vulkan_guide
     main.cpp
@@ -11,8 +11,16 @@ add_executable(vulkan_guide
 
 set_property(TARGET vulkan_guide PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:vulkan_guide>")
 
+# Add fmt
+FetchContent_Declare(fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG master
+)
+FetchContent_MakeAvailable(fmt)
+# end Add fmt
+
 target_include_directories(vulkan_guide PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(vulkan_guide vkbootstrap vma glm tinyobjloader imgui stb_image)
+target_link_libraries(vulkan_guide vkbootstrap vma glm tinyobjloader imgui stb_image fmt::fmt)
 
 target_link_libraries(vulkan_guide Vulkan::Vulkan sdl2)
 
