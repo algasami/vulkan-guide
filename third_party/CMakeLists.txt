@@ -31,9 +31,18 @@ target_include_directories(tinyobjloader PUBLIC tinyobjloader)
 add_library(sdl2 INTERFACE)
 set(sdl2_DIR "SDL_PATH" CACHE PATH "Path to SDL2")
 
+
 if (WIN32)
 target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include ${sdl2_image_DIR}/include)
 target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib/x64 ${sdl2_image_DIR}/lib/x64)
+elseif (APPLE) # added mac os support
+execute_process (
+    COMMAND brew --prefix
+    OUTPUT_VARIABLE brewPrefix
+    OUTPUT_STRIP_TRAILING_WHITESPACE # for some reason brew --prefix outputs with \n at the end???
+)
+target_include_directories(sdl2 INTERFACE ${brewPrefix}/include/SDL2)
+target_link_directories(sdl2 INTERFACE ${brewPrefix}/lib)
 elseif (UNIX)
 target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include/SDL2 ${sdl2_image_DIR}/include/SDL2)
 target_link_directories(sdl2 INTERFACE ${sdl2_DIR}/lib ${sdl2_image_DIR}/lib)

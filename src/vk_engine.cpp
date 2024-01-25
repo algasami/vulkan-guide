@@ -1,8 +1,8 @@
 ﻿
 #include "vk_engine.h"
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
+#include <SDL.h>
+#include <SDL_vulkan.h>
 
 #include <vk_initializers.h>
 #include <vk_types.h>
