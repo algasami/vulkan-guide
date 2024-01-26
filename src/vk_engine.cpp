@@ -16,6 +16,7 @@ constexpr bool bUseValidationLayers = true;
 VulkanEngine *loadedEngine = nullptr;
 
 VulkanEngine &VulkanEngine::Get() { return *loadedEngine; }
+
 void VulkanEngine::init() {
   // only one engine initialization is allowed with the application.
   assert(loadedEngine == nullptr);
@@ -30,13 +31,28 @@ void VulkanEngine::init() {
                              SDL_WINDOWPOS_UNDEFINED, _windowExtent.width,
                              _windowExtent.height, windowFlags);
 
+  init_vulkan();
+
+  init_swapchain();
+
+  init_commands();
+
+  init_sync_structures();
+
   // everything went fine
   _isInitialized = true;
 }
 
 void VulkanEngine::cleanup() {
   if (_isInitialized) {
+    destroy_swapchain();
+    vkDestroySurfaceKHR(_instance, _surface, nullptr);
+    vkDestroyDevice(_device, nullptr);
 
+    vkb::destroy_debug_utils_messenger(_instance, _debugMessenger);
+    vkDestroyInstance(_instance, nullptr);
+    // we don't need to destroy physical devices due to their descriptive nature
+    // (descriptor objects)
     SDL_DestroyWindow(_window);
   }
 
@@ -129,6 +145,49 @@ void VulkanEngine::init_vulkan() {
   _device = vkbDevice.device;
   _chosenGPU = physicalDevice.physical_device;
 }
-void VulkanEngine::init_swapchain() {}
 void VulkanEngine::init_commands() {}
 void VulkanEngine::init_sync_structures() {}
+
+void VulkanEngine::create_swapchain(uint32_t width, uint32_t height) {
+  vkb::SwapchainBuilder swapchainBuilder{_chosenGPU, _device, _surface};
+
+  _swapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+
+  vkb::Swapchain vkbSwapchain =
+      swapchainBuilder
+          .set_desired_format(VkSurfaceFormatKHR{
+              .format = _swapchainImageFormat,
+              .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
+          // FIFO_RELAXED
+          // This means that our engine allows tearing when our current frame
+          // rate is less than that of the monitor's, while enabling VSync when
+          // it's no less than the monitor's.
+          .set_desired_present_mode(VK_PRESENT_MODE_FIFO_RELAXED_KHR)
+          .set_desired_extent(width, height)
+          .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+          .build()
+          .value();
+
+  _swapchainExtent = vkbSwapchain.extent;
+
+  // since VkSwapchain, VkImage, VkImageView are all handles(pointers) to hidden
+  // structs, we can directly copy vectors of them without worrying about mem
+  // leaks (as they are pre-allocated by the vulkan instance)
+  _swapchain = vkbSwapchain.swapchain;
+  _swapchainImages = vkbSwapchain.get_images().value();
+  _swapchainImageViews = vkbSwapchain.get_image_views().value();
+}
+
+void VulkanEngine::init_swapchain() {
+  create_swapchain(_windowExtent.width, _windowExtent.height);
+}
+void VulkanEngine::destroy_swapchain() {
+  vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+
+  // swapchain resources (image, image view) should also be destroyed
+  // note image views are handlers of images, so we can just destroy image
+  // views, and images would be destroyed simultaneously.
+  for (VkImageView &const imageView : _swapchainImageViews) {
+    vkDestroyImageView(_device, imageView, nullptr);
+  }
+}
