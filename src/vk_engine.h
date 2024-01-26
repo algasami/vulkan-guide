@@ -9,10 +9,14 @@ class VulkanEngine {
 public:
   bool _isInitialized{false};
   int _frameNumber{0};
+  bool stopRendering{false};
 
   VkExtent2D _windowExtent{1700, 900};
 
   struct SDL_Window *_window{nullptr};
+
+  // singleton fetcher
+  static VulkanEngine &Get();
 
   // initializes everything in the engine
   void init();
