@@ -7,25 +7,24 @@
 
 class VulkanEngine {
 public:
+  bool _isInitialized{false};
+  int _frameNumber{0};
+  bool stopRendering{false};
+  VkExtent2D _windowExtent{1700, 900};
 
-	bool _isInitialized{ false };
-	int _frameNumber {0};
-	bool stop_rendering{ false };
-	VkExtent2D _windowExtent{ 1700 , 900 };
+  struct SDL_Window *_window{nullptr};
 
-	struct SDL_Window* _window{ nullptr };
+  static VulkanEngine &Get();
 
-	static VulkanEngine& Get();
+  // initializes everything in the engine
+  void init();
 
-	//initializes everything in the engine
-	void init();
+  // shuts down the engine
+  void cleanup();
 
-	//shuts down the engine
-	void cleanup();
+  // draw loop
+  void draw();
 
-	//draw loop
-	void draw();
-
-	//run main loop
-	void run();
+  // run main loop
+  void run();
 };
