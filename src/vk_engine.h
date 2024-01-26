@@ -27,4 +27,14 @@ public:
 
   // run main loop
   void run();
+  VkInstance _instance;
+  VkDebugUtilsMessengerEXT _debugMessenger; // debug output
+  VkPhysicalDevice _chosenGPU;              // discrete GPU
+  VkDevice _device;                         // logical device
+  VkSurfaceKHR _surface;                    // window surface
+private:
+  void init_vulkan();
+  void init_swapchain();
+  void init_commands();
+  void init_sync_structures();
 };
