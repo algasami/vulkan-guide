@@ -1,7 +1,8 @@
 #include "vk_images.h"
 
-void transition_image(VkCommandBuffer cmd, VkImage image,
-                      VkImageLayout currentLayout, VkImageLayout newLayout) {
+void vkutil::transition_image(VkCommandBuffer cmd, VkImage image,
+                              VkImageLayout currentLayout,
+                              VkImageLayout newLayout) {
   // convert image to drawable, clear it with new color, convert to driver
   // format
   VkImageMemoryBarrier2 imageBarrier{

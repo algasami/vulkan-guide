@@ -50,6 +50,11 @@ void VulkanEngine::cleanup() {
 
     for (int i = 0; i < FRAME_OVERLAP; i++) {
       vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
+
+      // sync
+      vkDestroyFence(_device, _frames[i]._renderFence, nullptr);
+      vkDestroySemaphore(_device, _frames[i]._renderSemaphore, nullptr);
+      vkDestroySemaphore(_device, _frames[i]._swapchainSemaphore, nullptr);
     }
     destroy_swapchain();
     vkDestroySurfaceKHR(_instance, _surface, nullptr);
