@@ -67,6 +67,25 @@ void VulkanEngine::cleanup() {
 
 void VulkanEngine::draw() {
   // nothing yet
+  // wait for GPU to finish rendering (1 second timeout)
+  VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true,
+                           1000000000));
+  VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
+  uint32_t swapchainImageIndex; // get image index from swapchain
+  // don't need to use fence here, as we don't have to wait for GPU to finish
+  // this but we also have to make sure it's synced with other GPU operations
+  VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000,
+                                 get_current_frame()._swapchainSemaphore,
+                                 nullptr, &swapchainImageIndex));
+  VkCommandBuffer cmd = get_current_frame()._mainCommandBuffer;
+
+  VK_CHECK(vkResetCommandBuffer(cmd, 0));
+
+  // uses only once and then discard it
+  VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(
+      VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+  VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 }
 
 void VulkanEngine::run() {
