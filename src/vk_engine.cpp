@@ -105,6 +105,22 @@ void VulkanEngine::draw() {
 
   VK_CHECK(vkEndCommandBuffer(cmd));
   // cmd has been finalized
+
+  // submission preparation
+  VkCommandBufferSubmitInfo cmdInfo = vkinit::command_buffer_submit_info(cmd);
+
+  VkSemaphoreSubmitInfo waitInfo = vkinit::semaphore_submit_info(
+      VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, // wait for acquire
+                                                           // next image
+      get_current_frame()._swapchainSemaphore);
+  VkSemaphoreSubmitInfo signalInfo = vkinit::semaphore_submit_info(
+      VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, // signal our render op
+      get_current_frame()._renderSemaphore);
+
+  VkSubmitInfo2 submit = vkinit::submit_info(&cmdInfo, &signalInfo, &waitInfo);
+
+  VK_CHECK(vkQueueSubmit2(_graphicsQueue, 1, &submit,
+                          get_current_frame()._renderFence));
 }
 
 void VulkanEngine::run() {
