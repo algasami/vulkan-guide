@@ -8,6 +8,10 @@
 struct FrameData {
   VkCommandPool _commandPool;
   VkCommandBuffer _mainCommandBuffer;
+  VkSemaphore _swapchainSemaphore, _renderSemaphore; // GPU <-> GPU fence
+  // _swapchainSemaphore: render command wait on swapchain
+  // _renderSemaphore: control presenting image
+  VkFence _renderFence; // GPU -> CPU fence
 };
 
 // this means that we render one frame and prepare another one simultaneously

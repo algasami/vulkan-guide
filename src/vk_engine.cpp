@@ -178,7 +178,21 @@ void VulkanEngine::init_commands() {
                                       &_frames[i]._mainCommandBuffer));
   }
 }
-void VulkanEngine::init_sync_structures() {}
+void VulkanEngine::init_sync_structures() {
+  VkFenceCreateInfo fenceCreateInfo = vkinit::fence_create_info(
+      VK_FENCE_CREATE_SIGNALED_BIT); // start signaled (wait on it)
+  VkSemaphoreCreateInfo semaphoreCreateInfo = vkinit::semaphore_create_info();
+
+  for (int i = 0; i < FRAME_OVERLAP; i++) {
+    VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr,
+                           &_frames[i]._renderFence));
+
+    VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr,
+                               &_frames[i]._renderSemaphore));
+    VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr,
+                               &_frames[i]._swapchainSemaphore));
+  }
+}
 
 void VulkanEngine::create_swapchain(uint32_t width, uint32_t height) {
   vkb::SwapchainBuilder swapchainBuilder{_chosenGPU, _device, _surface};
