@@ -1,5 +1,6 @@
 ﻿//> includes
 #include "vk_engine.h"
+#include "vk_images.h"
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -86,6 +87,24 @@ void VulkanEngine::draw() {
       VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
   VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
+
+  vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex],
+                           VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+  VkClearColorValue clearValue;
+  float flash = abs(sin(static_cast<float>(_frameNumber) / 120.f));
+  clearValue = {{0.0f, 0.0f, flash, 1.0f}};
+  VkImageSubresourceRange clearRange =
+      vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+
+  vkCmdClearColorImage(cmd, _swapchainImages[swapchainImageIndex],
+                       VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+  vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex],
+                           VK_IMAGE_LAYOUT_GENERAL,
+                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+  VK_CHECK(vkEndCommandBuffer(cmd));
+  // cmd has been finalized
 }
 
 void VulkanEngine::run() {
