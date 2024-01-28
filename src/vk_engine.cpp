@@ -121,6 +121,22 @@ void VulkanEngine::draw() {
 
   VK_CHECK(vkQueueSubmit2(_graphicsQueue, 1, &submit,
                           get_current_frame()._renderFence));
+  // present
+  VkPresentInfoKHR presentInfo = {};
+  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  presentInfo.pNext = nullptr;
+  presentInfo.pSwapchains = &_swapchain;
+  presentInfo.swapchainCount = 1;
+
+  presentInfo.pWaitSemaphores =
+      &get_current_frame()._renderSemaphore; // wait for render to finish
+  presentInfo.waitSemaphoreCount = 1;
+
+  presentInfo.pImageIndices = &swapchainImageIndex;
+
+  VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
+
+  _frameNumber++;
 }
 
 void VulkanEngine::run() {
