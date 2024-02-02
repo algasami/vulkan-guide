@@ -47,6 +47,7 @@ void VulkanEngine::init() {
 void VulkanEngine::cleanup() {
   if (_isInitialized) {
     vkDeviceWaitIdle(_device);
+    _deletionStack.flush();
 
     for (int i = 0; i < FRAME_OVERLAP; i++) {
       vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
@@ -76,6 +77,8 @@ void VulkanEngine::draw() {
   // wait for GPU to finish rendering (1 second timeout)
   VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true,
                            1000000000));
+  get_current_frame()._deletionStack.flush();
+
   VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
   uint32_t swapchainImageIndex; // get image index from swapchain
   // don't need to use fence here, as we don't have to wait for GPU to finish

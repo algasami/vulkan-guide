@@ -5,6 +5,22 @@
 
 #include <vk_types.h>
 
+struct DeletionStack {
+
+  std::stack<std::function<void()>> deletors;
+
+  void push_function(std::function<void()> &&function) {
+    deletors.push(function);
+  }
+
+  void flush() {
+    while (!deletors.empty()) {
+      deletors.top()();
+      deletors.pop();
+    }
+  }
+};
+
 struct FrameData {
   VkCommandPool _commandPool;
   VkCommandBuffer _mainCommandBuffer;
@@ -12,6 +28,7 @@ struct FrameData {
   // _swapchainSemaphore: render command wait on swapchain
   // _renderSemaphore: control presenting image
   VkFence _renderFence; // GPU -> CPU fence
+  DeletionStack _deletionStack;
 };
 
 // this means that we render one frame and prepare another one simultaneously
@@ -58,6 +75,7 @@ public:
 
   VkQueue _graphicsQueue;
   uint32_t _graphicsQueueFamily;
+  DeletionStack _deletionStack;
 
 private:
   void init_vulkan();
