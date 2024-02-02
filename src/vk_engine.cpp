@@ -5,10 +5,11 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
-#include <vk_initializers.h>
-#include <vk_types.h>
-
 #include "VkBootstrap.h"
+#include "vk_initializers.h"
+
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
 
 #include <chrono>
 #include <thread>
@@ -92,21 +93,31 @@ void VulkanEngine::draw() {
   VkCommandBufferBeginInfo cmdBeginInfo =
       vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
+  _drawExtent.width = _drawImage.imageExtent.width;
+  _drawExtent.height = _drawImage.imageExtent.height;
+
   VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
-  vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED,
+  // transition to general format so we can write to draw image
+  vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED,
                            VK_IMAGE_LAYOUT_GENERAL);
 
-  VkClearColorValue clearValue;
-  float flash = abs(sin(static_cast<float>(_frameNumber) / 120.f));
-  clearValue = {{0.0f, 0.0f, flash, 1.0f}};
-  VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+  draw_background(cmd);
 
-  vkCmdClearColorImage(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL,
-                       &clearValue, 1, &clearRange);
-  vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL,
-                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+  // transition the correct format (src and dst optimal formats)
+  vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL,
+                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+  vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
+  // execute a copy from the draw image into the swapchain (src to dst)
+  vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex],
+                              _drawExtent, _swapchainExtent);
+
+  vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex],
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+  // finalize the command buffer (we can no longer add commands, but it can now be executed)
   VK_CHECK(vkEndCommandBuffer(cmd));
   // cmd has been finalized
 
@@ -139,6 +150,15 @@ void VulkanEngine::draw() {
   VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
   _frameNumber++;
+}
+
+void VulkanEngine::draw_background(VkCommandBuffer cmd) {
+  VkClearColorValue clearValue;
+  float flash = abs(sin(static_cast<float>(_frameNumber) / 120.f));
+  clearValue = {{0.0f, 0.0f, flash, 1.0f}};
+  VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+
+  vkCmdClearColorImage(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
 }
 
 void VulkanEngine::run() {
@@ -332,7 +352,7 @@ void VulkanEngine::init_swapchain() {
 
   VK_CHECK(vkCreateImageView(_device, &rview_info, nullptr, &_drawImage.imageView));
 
-  _deletionStack.push_function([=]() {
+  _deletionStack.push_function([=, this]() {
     vkDestroyImageView(_device, _drawImage.imageView, nullptr);
     vmaDestroyImage(_allocator, _drawImage.image, _drawImage.allocation);
   });
@@ -343,7 +363,7 @@ void VulkanEngine::destroy_swapchain() {
   // swapchain resources (image, image view) should also be destroyed
   // note image views are handlers of images, so we can just destroy image
   // views, and images would be destroyed simultaneously.
-  for (VkImageView &const imageView : _swapchainImageViews) {
+  for (const VkImageView imageView : _swapchainImageViews) {
     vkDestroyImageView(_device, imageView, nullptr);
   }
 }

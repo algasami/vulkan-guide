@@ -3,10 +3,7 @@
 
 #pragma once
 
-#include <vk_types.h>
-
-#define VMA_IMPLEMENTATION
-#include <vk_mem_alloc.h>
+#include "vk_types.h"
 
 // this means that we render one frame and prepare another one simultaneously
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -30,6 +27,7 @@ public:
 
   // draw loop
   void draw();
+  void draw_background(VkCommandBuffer);
 
   // run main loop
   void run();
