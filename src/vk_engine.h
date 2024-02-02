@@ -5,31 +5,8 @@
 
 #include <vk_types.h>
 
-struct DeletionStack {
-
-  std::stack<std::function<void()>> deletors;
-
-  void push_function(std::function<void()> &&function) {
-    deletors.push(function);
-  }
-
-  void flush() {
-    while (!deletors.empty()) {
-      deletors.top()();
-      deletors.pop();
-    }
-  }
-};
-
-struct FrameData {
-  VkCommandPool _commandPool;
-  VkCommandBuffer _mainCommandBuffer;
-  VkSemaphore _swapchainSemaphore, _renderSemaphore; // GPU <-> GPU fence
-  // _swapchainSemaphore: render command wait on swapchain
-  // _renderSemaphore: control presenting image
-  VkFence _renderFence; // GPU -> CPU fence
-  DeletionStack _deletionStack;
-};
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
 
 // this means that we render one frame and prepare another one simultaneously
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -76,6 +53,12 @@ public:
   VkQueue _graphicsQueue;
   uint32_t _graphicsQueueFamily;
   DeletionStack _deletionStack;
+  VmaAllocator _allocator;
+
+  AllocatedImage _drawImage;
+  VkExtent2D _drawExtent;
+  // _drawExtent is different from _swapchainExtent
+  // we never draw directly to swapchain so we use another image as a proxy
 
 private:
   void init_vulkan();
