@@ -13,9 +13,8 @@ void vkutil::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout 
   imageBarrier.oldLayout = currentLayout;
   imageBarrier.newLayout = newLayout;
 
-  VkImageAspectFlags aspectMask = (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
-                                      ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                      : VK_IMAGE_ASPECT_COLOR_BIT;
+  VkImageAspectFlags aspectMask =
+      (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
   // access a certain layer of our image
   imageBarrier.subresourceRange = vkinit::image_subresource_range(aspectMask);
   imageBarrier.image = image;
@@ -30,8 +29,8 @@ void vkutil::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout 
   vkCmdPipelineBarrier2(cmd, &depInfo);
 }
 
-void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination,
-                                 VkExtent2D srcSize, VkExtent2D dstSize) {
+void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination, VkExtent2D srcSize,
+                                 VkExtent2D dstSize) {
   VkImageBlit2 blitRegion{.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr};
 
   blitRegion.srcOffsets[1].x = srcSize.width;

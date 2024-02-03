@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "vk_descriptors.h"
 #include "vk_types.h"
 
 // this means that we render one frame and prepare another one simultaneously
@@ -58,11 +59,18 @@ public:
   // _drawExtent is different from _swapchainExtent
   // we never draw directly to swapchain so we use another image as a proxy
 
+  DescriptorAllocator globalDescriptorAllocator;
+
+  VkDescriptorSet _drawImageDescriptors;
+  VkDescriptorSetLayout _drawImageDescriptorLayout;
+  // these are for shader bindings and sending data to GPUs
+
 private:
   void init_vulkan();
   void init_swapchain();
   void init_commands();
   void init_sync_structures();
+  void init_descriptors();
 
   void create_swapchain(uint32_t width, uint32_t height);
   void destroy_swapchain();

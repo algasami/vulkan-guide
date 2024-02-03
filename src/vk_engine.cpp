@@ -29,12 +29,14 @@ void VulkanEngine::init() {
 
   SDL_WindowFlags windowFlags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 
-  _window = SDL_CreateWindow("Vulkan Engine", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                             _windowExtent.width, _windowExtent.height, windowFlags);
+  _window = SDL_CreateWindow("Vulkan Engine", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, _windowExtent.width,
+                             _windowExtent.height, windowFlags);
 
   init_vulkan();
 
   init_swapchain();
+
+  init_descriptors();
 
   init_commands();
 
@@ -82,8 +84,7 @@ void VulkanEngine::draw() {
   uint32_t swapchainImageIndex; // get image index from swapchain
   // don't need to use fence here, as we don't have to wait for GPU to finish
   // this but we also have to make sure it's synced with other GPU operations
-  VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000,
-                                 get_current_frame()._swapchainSemaphore, nullptr,
+  VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr,
                                  &swapchainImageIndex));
   VkCommandBuffer cmd = get_current_frame()._mainCommandBuffer;
 
@@ -99,23 +100,21 @@ void VulkanEngine::draw() {
   VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
   // transition to general format so we can write to draw image
-  vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED,
-                           VK_IMAGE_LAYOUT_GENERAL);
+  vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
   draw_background(cmd);
 
   // transition the correct format (src and dst optimal formats)
-  vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL,
-                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+  vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
   vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
   // execute a copy from the draw image into the swapchain (src to dst)
-  vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex],
-                              _drawExtent, _swapchainExtent);
+  vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex], _drawExtent,
+                              _swapchainExtent);
 
-  vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex],
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+  vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
   // finalize the command buffer (we can no longer add commands, but it can now be executed)
   VK_CHECK(vkEndCommandBuffer(cmd));
@@ -124,10 +123,10 @@ void VulkanEngine::draw() {
   // submission preparation
   VkCommandBufferSubmitInfo cmdInfo = vkinit::command_buffer_submit_info(cmd);
 
-  VkSemaphoreSubmitInfo waitInfo = vkinit::semaphore_submit_info(
-      VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, // wait for acquire
-                                                           // next image
-      get_current_frame()._swapchainSemaphore);
+  VkSemaphoreSubmitInfo waitInfo =
+      vkinit::semaphore_submit_info(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, // wait for acquire
+                                                                                         // next image
+                                    get_current_frame()._swapchainSemaphore);
   VkSemaphoreSubmitInfo signalInfo =
       vkinit::semaphore_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, // signal our render op
                                     get_current_frame()._renderSemaphore);
@@ -270,8 +269,7 @@ void VulkanEngine::init_commands() {
     // use the same configuration of command pools for all frames
     VK_CHECK(vkCreateCommandPool(_device, &commandPoolInfo, nullptr, &_frames[i]._commandPool));
 
-    VkCommandBufferAllocateInfo bufferAllocInfo =
-        vkinit::command_buffer_allocate_info(_frames[i]._commandPool, 1);
+    VkCommandBufferAllocateInfo bufferAllocInfo = vkinit::command_buffer_allocate_info(_frames[i]._commandPool, 1);
 
     VK_CHECK(vkAllocateCommandBuffers(_device, &bufferAllocInfo, &_frames[i]._mainCommandBuffer));
   }
@@ -284,10 +282,8 @@ void VulkanEngine::init_sync_structures() {
   for (int i = 0; i < FRAME_OVERLAP; i++) {
     VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_frames[i]._renderFence));
 
-    VK_CHECK(
-        vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_frames[i]._renderSemaphore));
-    VK_CHECK(
-        vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_frames[i]._swapchainSemaphore));
+    VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_frames[i]._renderSemaphore));
+    VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_frames[i]._swapchainSemaphore));
   }
 }
 
@@ -298,8 +294,8 @@ void VulkanEngine::create_swapchain(uint32_t width, uint32_t height) {
 
   vkb::Swapchain vkbSwapchain =
       swapchainBuilder
-          .set_desired_format(VkSurfaceFormatKHR{.format = _swapchainImageFormat,
-                                                 .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
+          .set_desired_format(
+              VkSurfaceFormatKHR{.format = _swapchainImageFormat, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
           // FIFO_RELAXED
           // This means that our engine allows tearing when our current frame
           // rate is less than that of the monitor's, while enabling VSync when
@@ -335,20 +331,17 @@ void VulkanEngine::init_swapchain() {
   drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
   drawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  VkImageCreateInfo rimg_info =
-      vkinit::image_create_info(_drawImage.imageFormat, drawImageUsages, drawImageExtent);
+  VkImageCreateInfo rimg_info = vkinit::image_create_info(_drawImage.imageFormat, drawImageUsages, drawImageExtent);
 
   // vma allocation (only for local vram usage)
   VmaAllocationCreateInfo rimg_allocinfo = {};
   rimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-  rimg_allocinfo.requiredFlags =
-      VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); // VRAM usage only
+  rimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); // VRAM usage only
 
-  vmaCreateImage(_allocator, &rimg_info, &rimg_allocinfo, &_drawImage.image, &_drawImage.allocation,
-                 nullptr);
+  vmaCreateImage(_allocator, &rimg_info, &rimg_allocinfo, &_drawImage.image, &_drawImage.allocation, nullptr);
 
-  VkImageViewCreateInfo rview_info = vkinit::imageview_create_info(
-      _drawImage.imageFormat, _drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
+  VkImageViewCreateInfo rview_info =
+      vkinit::imageview_create_info(_drawImage.imageFormat, _drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
 
   VK_CHECK(vkCreateImageView(_device, &rview_info, nullptr, &_drawImage.imageView));
 
@@ -366,4 +359,37 @@ void VulkanEngine::destroy_swapchain() {
   for (const VkImageView imageView : _swapchainImageViews) {
     vkDestroyImageView(_device, imageView, nullptr);
   }
+}
+
+void VulkanEngine::init_descriptors() {
+  // create a descriptor pool that will hold 10 sets with 1 image each
+  std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
+
+  globalDescriptorAllocator.init_pool(_device, 10, sizes);
+
+  // make layout
+  {
+    DescriptorLayoutBuilder builder;
+    builder.add_binding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+    _drawImageDescriptorLayout = builder.build(_device, VK_SHADER_STAGE_COMPUTE_BIT);
+  }
+
+  // allocate a descriptor set for our draw image
+  _drawImageDescriptors = globalDescriptorAllocator.allocate(_device, _drawImageDescriptorLayout);
+
+  VkDescriptorImageInfo imgInfo{};
+  imgInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  imgInfo.imageView = _drawImage.imageView;
+
+  VkWriteDescriptorSet drawImageWrite = {};
+  drawImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  drawImageWrite.pNext = nullptr;
+
+  drawImageWrite.dstBinding = 0;
+  drawImageWrite.dstSet = _drawImageDescriptors;
+  drawImageWrite.descriptorCount = 1;
+  drawImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+  drawImageWrite.pImageInfo = &imgInfo;
+
+  vkUpdateDescriptorSets(_device, 1, &drawImageWrite, 0, nullptr);
 }
