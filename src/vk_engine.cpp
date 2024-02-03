@@ -233,12 +233,16 @@ void VulkanEngine::init_vulkan() {
 
   // Physical Device = GPU's properties
   vkb::PhysicalDeviceSelector selector{vkbInstance};
-  vkb::PhysicalDevice physicalDevice = selector.set_minimum_version(1, 3)
-                                           .set_required_features_13(features)
-                                           .set_required_features_12(features12)
-                                           .set_surface(_surface)
-                                           .select()
-                                           .value();
+  auto physicalDeviceSelect = selector.set_minimum_version(1, 3)
+                                  .set_required_features_13(features)
+                                  .set_required_features_12(features12)
+                                  .set_surface(_surface)
+                                  .select();
+  if (!physicalDeviceSelect) {
+    fmt::println("{}", physicalDeviceSelect.error().message());
+  }
+  vkb::PhysicalDevice physicalDevice = physicalDeviceSelect.value();
+  fmt::println("{}", physicalDevice.name);
 
   vkb::DeviceBuilder deviceBuilder{physicalDevice};
 
