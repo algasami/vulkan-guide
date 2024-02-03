@@ -65,12 +65,19 @@ public:
   VkDescriptorSetLayout _drawImageDescriptorLayout;
   // these are for shader bindings and sending data to GPUs
 
+  VkPipeline _gradientPipeline;
+  VkPipelineLayout _gradientPipelineLayout;
+  // for loading shader
+
 private:
   void init_vulkan();
   void init_swapchain();
   void init_commands();
   void init_sync_structures();
   void init_descriptors();
+
+  void init_pipelines();
+  void init_background_pipelines();
 
   void create_swapchain(uint32_t width, uint32_t height);
   void destroy_swapchain();
