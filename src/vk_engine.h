@@ -69,6 +69,14 @@ public:
   VkPipelineLayout _gradientPipelineLayout;
   // for loading shader
 
+  VkFence _immFence;
+  VkCommandBuffer _immCommandBuffer;
+  VkCommandPool _immCommandPool;
+
+  void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function);
+  // right value function (avoid wasting memory)
+  // for immediate submit imgui
+
 private:
   void init_vulkan();
   void init_swapchain();
@@ -78,6 +86,9 @@ private:
 
   void init_pipelines();
   void init_background_pipelines();
+
+  void init_imgui();
+  void draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView);
 
   void create_swapchain(uint32_t width, uint32_t height);
   void destroy_swapchain();
