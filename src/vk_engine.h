@@ -16,6 +16,15 @@ struct ComputePushConstants {
   glm::vec4 data4;
 };
 
+struct ComputeEffect {
+  const char *name;
+
+  VkPipeline pipeline;
+  VkPipelineLayout layout;
+
+  ComputePushConstants data;
+};
+
 class VulkanEngine {
 public:
   bool _isInitialized{false};
@@ -72,8 +81,8 @@ public:
   VkDescriptorSetLayout _drawImageDescriptorLayout;
   // these are for shader bindings and sending data to GPUs
 
-  VkPipeline _gradientPipeline;
-  VkPipelineLayout _gradientPipelineLayout;
+  VkPipeline _commonPipeline;
+  VkPipelineLayout _commonPipelineLayout;
   // for loading shader
 
   VkFence _immFence;
@@ -83,6 +92,11 @@ public:
   void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function);
   // right value function (avoid wasting memory)
   // for immediate submit imgui
+
+  // dynamic data for imgui live editor
+  // also loading shader 2.0
+  std::vector<ComputeEffect> backgroundEffects;
+  int currentBackgroundEffect{0};
 
 private:
   void init_vulkan();
