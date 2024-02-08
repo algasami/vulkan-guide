@@ -407,12 +407,14 @@ void VulkanEngine::init_descriptors() {
   std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
 
   globalDescriptorAllocator.init_pool(_device, 10, sizes);
+  _deletionStack.push_function([&]() { globalDescriptorAllocator.destroy_pool(_device); });
 
   // make layout
   {
     DescriptorLayoutBuilder builder;
     builder.add_binding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
     _drawImageDescriptorLayout = builder.build(_device, VK_SHADER_STAGE_COMPUTE_BIT);
+    _deletionStack.push_function([&]() { vkDestroyDescriptorSetLayout(_device, _drawImageDescriptorLayout, nullptr); });
   }
 
   // allocate a descriptor set for our draw image
