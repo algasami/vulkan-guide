@@ -9,6 +9,13 @@
 // this means that we render one frame and prepare another one simultaneously
 constexpr unsigned int FRAME_OVERLAP = 2;
 
+struct ComputePushConstants {
+  glm::vec4 data1;
+  glm::vec4 data2;
+  glm::vec4 data3;
+  glm::vec4 data4;
+};
+
 class VulkanEngine {
 public:
   bool _isInitialized{false};
