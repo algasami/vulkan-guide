@@ -174,7 +174,8 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd) {
                           nullptr);
 
   // execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
-  vkCmdDispatch(cmd, std::ceil(_drawExtent.width / 16.0), std::ceil(_drawExtent.height / 16.0), 1);
+  vkCmdDispatch(cmd, static_cast<uint32_t>(std::ceil(_drawExtent.width / 16.0)),
+                static_cast<uint32_t>(std::ceil(_drawExtent.height / 16.0)), 1);
 }
 
 void VulkanEngine::run() {
